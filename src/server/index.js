@@ -8,6 +8,7 @@ const csv = require('csv-parse/sync');
 const debug = require('debug')('battlebees:server');
 
 const app = express();
+const httpServer = axios.createServer(app);
 const PORT = process.env.PORT || 4000;
 
 // Update CORS configuration for Express
@@ -49,22 +50,20 @@ const server = app.listen(PORT, () => {
 });
 
 // Update Socket.IO configuration
-const io = socketIo(server, {
+const io = new Server( httpServer, {
   cors: {
     origin: [
       'http://localhost:5173',
       'https://battlebees.onrender.com'
     ],
     methods: ['GET', 'POST'],
-    credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization']
-  },
-  transports: ['polling', 'websocket'],
-  pingTimeout: 60000,
-  pingInterval: 25000,
-  connectTimeout: 45000,
-  allowEIO3: true,
-  path: '/socket.io/'
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+  }
+});
+
+httpServer.listen(PORT, () => {
+  console.log(`Socket.IO server running on port ${PORT}`);
 });
 
 const rooms = {};
