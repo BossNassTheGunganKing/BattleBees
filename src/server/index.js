@@ -10,13 +10,9 @@ const debug = require('debug')('battlebees:server');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Update CORS configuration for Express
+// Update CORS configuration
 app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "https://battlebees.onrender.com",
-    "https://battlebees.onrender.com/"
-  ],
+  origin: "*",  // Allow all origins in development
   methods: ["GET", "POST"],
   credentials: true
 }));
@@ -41,25 +37,18 @@ const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-// Update Socket.IO CORS configuration
+// Update Socket.IO configuration
 const io = socketIo(server, {
   cors: {
-    origin: [
-      "http://localhost:5173",
-      "https://battlebees.onrender.com",
-      "https://battlebees.onrender.com/"
-    ],
+    origin: "*",  // Allow all origins in development
     methods: ["GET", "POST"],
-    credentials: true,
-    allowedHeaders: ["my-custom-header"]
+    credentials: true
   },
-  // Add transport options for better connection handling
   transports: ['websocket', 'polling'],
   pingTimeout: 60000,
   pingInterval: 25000,
-  // Add these options for better debugging
   connectTimeout: 45000,
-  debug: true
+  allowEIO3: true // Enable compatibility mode
 });
 
 const rooms = {};
@@ -467,4 +456,15 @@ io.on('connection', (socket) => {
     debug(`Broadcasting game state for room ${roomId}:`, gameState);
     io.to(roomId).emit('gameState', gameState);
   }
+});
+
+// Add this after your route definitions
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// Add a catch-all route
+app.use('*', (req, res) => {
+  res.status(404).json({ error: 'Not found' });
 });

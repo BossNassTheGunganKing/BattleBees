@@ -9,8 +9,21 @@ import { VictoryScreen } from './components/VictoryScreen';
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
 
 const socket: Socket = io(SOCKET_URL, {
-  reconnectionAttempts: 3,
+  reconnectionAttempts: 5,
   reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: 20000,
+  autoConnect: true,
+  transports: ['websocket', 'polling'],
+});
+
+// Add connection error handling
+socket.on('connect_error', (error) => {
+  console.error('Connection error:', error);
+});
+
+socket.on('connect_timeout', () => {
+  console.error('Connection timeout');
 });
 
 type Player = {
