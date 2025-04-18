@@ -29,13 +29,20 @@ type GameState = {
   errorMessage: string;
   roomExists: boolean; // Added to track room validity
   countdown?: number | null; // Added countdown to game state
-  winner?: {
+  winner: {
     id: string;
     name: string;
     score: number;
     foundWords: string[];
     winReason: string;
-  };
+  } | null; // Make winner explicitly nullable
+};
+
+type GameStateUpdate = {
+  letters: string[];
+  centerLetter: string;
+  players: Player[];
+  roomId: string;
 };
 
 enum GameScreenEnum {
@@ -57,7 +64,8 @@ const App: React.FC = () => {
     gameOverReason: '',
     errorMessage: '',
     roomExists: true,
-    countdown: null
+    countdown: null,
+    winner: null // Add winner property with initial null value
   });
   const [loading, setLoading] = useState(false);
 
@@ -72,7 +80,7 @@ const App: React.FC = () => {
       setGame(prev => ({ ...prev, errorMessage: '' }));
     });
 
-    socket.on('joinConfirmed', ({ playerId, letters, centerLetter, roomExists }) => {
+    socket.on('joinConfirmed', ({ playerId, letters, centerLetter, players, roomId, roomExists }) => {
       if (!roomExists) {
         setGame(prev => ({
           ...prev,
@@ -82,14 +90,19 @@ const App: React.FC = () => {
         return;
       }
       
+      console.log('Join confirmed:', { playerId, roomId, players });
       setGame(prev => ({
         ...prev,
         currentPlayerId: playerId,
         letters,
         centerLetter,
-        errorMessage: '',
-        roomExists: true
+        players,
+        roomId,
+        roomExists: true,
+        errorMessage: ''
       }));
+      setLoading(false);
+      setCurrentScreen(GameScreenEnum.WAITING);
     });
 
     socket.on('roomError', (message) => {
@@ -146,22 +159,6 @@ const App: React.FC = () => {
       setCurrentScreen(GameScreenEnum.PLAYING);
     });
 
-    socket.on('joinConfirmed', ({ playerId, letters, centerLetter, players, roomId }) => {
-      console.log('Join confirmed:', { playerId, roomId, players });
-      setGame(prev => ({
-        ...prev,
-        letters,
-        centerLetter,
-        players,
-        currentPlayerId: playerId,
-        roomId,
-        roomExists: true,
-        errorMessage: ''
-      }));
-      setLoading(false);
-      setCurrentScreen(GameScreenEnum.WAITING);
-    });
-
     socket.on('gameOver', ({ winner }) => {
       console.log('Game Over!', winner);
       setGame(prev => ({
@@ -172,16 +169,20 @@ const App: React.FC = () => {
       setCurrentScreen(GameScreenEnum.VICTORY);
     });
 
-    socket.on('returnToLobby', (gameState) => {
+    socket.on('returnToLobby', (gameState: GameStateUpdate) => {
       console.log('Returning to lobby with state:', gameState);
       setGame(prev => ({
         ...prev,
         letters: gameState.letters,
         centerLetter: gameState.centerLetter,
         players: gameState.players,
+        roomId: gameState.roomId, // Add this to ensure roomId is preserved
         gameOver: false,
-        winner: null,
-        roomExists: true
+        winner: null as GameState['winner'], // Explicitly type the null assignment
+        roomExists: true,
+        errorMessage: '', // Reset any error messages
+        countdown: null, // Reset countdown state
+        gameOverReason: '' // Reset game over reason as well
       }));
       setCurrentScreen(GameScreenEnum.WAITING);
     });
