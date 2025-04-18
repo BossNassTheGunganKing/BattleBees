@@ -5,6 +5,7 @@ const axios = require('axios'); // Add axios for API calls
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parse/sync');
+const debug = require('debug')('battlebees:server');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -19,6 +20,22 @@ app.use(cors({
   methods: ["GET", "POST"],
   credentials: true
 }));
+
+// Add after the CORS configuration
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/debug/rooms', (req, res) => {
+  res.json({
+    rooms: Object.keys(rooms).map(roomId => ({
+      roomId,
+      playerCount: Object.keys(rooms[roomId].players).length,
+      gameStarted: rooms[roomId].gameStarted,
+      countdownActive: rooms[roomId].countdownActive
+    }))
+  });
+});
 
 const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
@@ -39,7 +56,10 @@ const io = socketIo(server, {
   // Add transport options for better connection handling
   transports: ['websocket', 'polling'],
   pingTimeout: 60000,
-  pingInterval: 25000
+  pingInterval: 25000,
+  // Add these options for better debugging
+  connectTimeout: 45000,
+  debug: true
 });
 
 const rooms = {};
@@ -106,7 +126,12 @@ function getRandomLetterSet() {
 }
 
 io.on('connection', (socket) => {
-  console.log(`New connection: ${socket.id}`);
+  debug(`Client connected: ${socket.id}`);
+
+  // Add connection event logging
+  socket.onAny((eventName, ...args) => {
+    debug(`Event received - ${eventName}:`, args);
+  });
 
   socket.on('createRoom', ({ roomId, playerName }) => {
     console.log(`Creating room: ${roomId} for player: ${playerName}`);
@@ -144,9 +169,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('joinRoom', ({ roomId, playerName }) => {
-    console.log(`Player ${playerName} attempting to join room ${roomId}`);
+    debug(`Join room request - Room: ${roomId}, Player: ${playerName}`);
 
     if (!rooms[roomId]) {
+      debug(`Room ${roomId} not found`);
       socket.emit('roomError', 'Room not found');
       return;
     }
@@ -160,17 +186,27 @@ io.on('connection', (socket) => {
     };
 
     socket.join(roomId);
+    debug(`Player ${playerName} joined room ${roomId}`);
 
-    // Send confirmation to joining player with roomId included
-    socket.emit('joinConfirmed', {
+    // Emit join confirmation
+    const joinData = {
       playerId: socket.id,
-      roomId, // Include roomId in response
+      roomId,
       letters: rooms[roomId].letters,
       centerLetter: rooms[roomId].centerLetter,
+      players: Object.values(rooms[roomId].players),
+      roomExists: true
+    };
+
+    debug('Sending join confirmation:', joinData);
+    socket.emit('joinConfirmed', joinData);
+
+    // Broadcast to other players
+    socket.to(roomId).emit('playerJoined', {
       players: Object.values(rooms[roomId].players)
     });
 
-    // Broadcast updated game state to all players
+    // Broadcast updated game state
     broadcastGameState(roomId);
 
     console.log(`Room ${roomId} players:`, rooms[roomId].players);
@@ -412,9 +448,12 @@ io.on('connection', (socket) => {
   });
 
   function broadcastGameState(roomId) {
-    if (!rooms[roomId]) return;
+    if (!rooms[roomId]) {
+      debug(`Cannot broadcast - Room ${roomId} not found`);
+      return;
+    }
     
-    io.to(roomId).emit('gameState', {
+    const gameState = {
       roomId,
       letters: rooms[roomId].letters,
       centerLetter: rooms[roomId].centerLetter,
@@ -423,6 +462,9 @@ io.on('connection', (socket) => {
       gameOver: rooms[roomId].gameOver,
       winner: rooms[roomId].winner,
       countdownActive: rooms[roomId].countdownActive || false
-    });
+    };
+
+    debug(`Broadcasting game state for room ${roomId}:`, gameState);
+    io.to(roomId).emit('gameState', gameState);
   }
 });
