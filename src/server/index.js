@@ -10,7 +10,10 @@ const app = express();
 
 // Configure CORS for Express
 app.use(cors({
-  origin: "http://localhost:5173", // Vite's default port
+  origin: [
+    "http://localhost:5173",
+    "https://battlebees.onrender.com"
+  ],
   methods: ["GET", "POST"],
   credentials: true
 }));
@@ -24,7 +27,10 @@ const server = app.listen(PORT, () => {
 // Configure Socket.IO with CORS
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: [
+      "http://localhost:5173",
+      "https://battlebees.onrender.com"
+    ],
     methods: ["GET", "POST"],
     credentials: true,
     allowedHeaders: ["my-custom-header"]
