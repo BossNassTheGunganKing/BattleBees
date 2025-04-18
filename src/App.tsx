@@ -6,7 +6,9 @@ import { WaitingRoom } from './components/WaitingRoom';
 import { GameScreen } from './components/GameScreen';
 import { VictoryScreen } from './components/VictoryScreen';
 
-const socket: Socket = io('http://localhost:4000', {
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
+
+const socket: Socket = io(SOCKET_URL, {
   reconnectionAttempts: 3,
   reconnectionDelay: 1000,
 });

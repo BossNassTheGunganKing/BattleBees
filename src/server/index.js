@@ -7,34 +7,39 @@ const path = require('path');
 const csv = require('csv-parse/sync');
 
 const app = express();
+const PORT = process.env.PORT || 4000;
 
-// Configure CORS for Express
+// Update CORS configuration for Express
 app.use(cors({
   origin: [
     "http://localhost:5173",
-    "https://battlebees.onrender.com"
+    "https://battlebees.onrender.com",
+    "https://battlebees.onrender.com/"
   ],
   methods: ["GET", "POST"],
   credentials: true
 }));
 
-const PORT = 4000;
-const MAX_PLAYERS = 8;
 const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-// Configure Socket.IO with CORS
+// Update Socket.IO CORS configuration
 const io = socketIo(server, {
   cors: {
     origin: [
       "http://localhost:5173",
-      "https://battlebees.onrender.com"
+      "https://battlebees.onrender.com",
+      "https://battlebees.onrender.com/"
     ],
     methods: ["GET", "POST"],
     credentials: true,
     allowedHeaders: ["my-custom-header"]
-  }
+  },
+  // Add transport options for better connection handling
+  transports: ['websocket', 'polling'],
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
 const rooms = {};
