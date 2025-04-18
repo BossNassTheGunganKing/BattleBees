@@ -14,16 +14,25 @@ const socket: Socket = io(SOCKET_URL, {
   reconnectionDelayMax: 5000,
   timeout: 20000,
   autoConnect: true,
-  transports: ['websocket', 'polling'],
+  transports: ['polling', 'websocket'], // Change order to try polling first
+  withCredentials: true, // Add this for CORS
+  path: '/socket.io/', // Explicitly set the path
+  forceNew: true, // Force a new connection
 });
 
-// Add connection error handling
+// Enhance error logging
 socket.on('connect_error', (error) => {
-  console.error('Connection error:', error);
+  console.error('Connection error:', error.message);
+  console.error('Connection error details:', {
+    transport: socket.io.engine.transport.name,
+    url: SOCKET_URL,
+    readyState: socket.io.engine.readyState
+  });
 });
 
-socket.on('connect_timeout', () => {
-  console.error('Connection timeout');
+socket.on('connect', () => {
+  console.log('Successfully connected to server');
+  console.log('Transport:', socket.io.engine.transport.name);
 });
 
 type Player = {

@@ -10,16 +10,27 @@ const debug = require('debug')('battlebees:server');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Update CORS configuration
+// Update CORS configuration for Express
 app.use(cors({
-  origin: "*",  // Allow all origins in development
-  methods: ["GET", "POST"],
+  origin: [
+    'http://localhost:5173',
+    'https://battlebees.onrender.com'
+  ],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 
-// Add after the CORS configuration
+// Add after CORS configuration
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    socketio: {
+      connected: io.engine.clientsCount,
+      rooms: Array.from(io.sockets.adapter.rooms.keys())
+    }
+  });
 });
 
 app.get('/debug/rooms', (req, res) => {
@@ -40,15 +51,20 @@ const server = app.listen(PORT, () => {
 // Update Socket.IO configuration
 const io = socketIo(server, {
   cors: {
-    origin: "*",  // Allow all origins in development
-    methods: ["GET", "POST"],
-    credentials: true
+    origin: [
+      'http://localhost:5173',
+      'https://battlebees.onrender.com'
+    ],
+    methods: ['GET', 'POST'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
   },
-  transports: ['websocket', 'polling'],
+  transports: ['polling', 'websocket'],
   pingTimeout: 60000,
   pingInterval: 25000,
   connectTimeout: 45000,
-  allowEIO3: true // Enable compatibility mode
+  allowEIO3: true,
+  path: '/socket.io/'
 });
 
 const rooms = {};
@@ -116,6 +132,7 @@ function getRandomLetterSet() {
 
 io.on('connection', (socket) => {
   debug(`Client connected: ${socket.id}`);
+  console.log('Transport:', socket.conn.transport.name);
 
   // Add connection event logging
   socket.onAny((eventName, ...args) => {
@@ -421,8 +438,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('disconnect', () => {
-    console.log(`Client disconnected: ${socket.id}`);
+  socket.on('disconnect', (reason) => {
+    console.log(`Client disconnected: ${socket.id}, reason: ${reason}`);
     // Clean up empty rooms
     for (const roomId in rooms) {
       if (rooms[roomId].players[socket.id]) {
