@@ -1,9 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { io } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 import './WaitingRoom.css'; // Import your CSS file for styling
 import '../App.css';
 
-const socket = io('http://localhost:4000'); // Replace with your server URL
+const SOCKET_URL = import.meta.env.PROD 
+  ? 'wss://battlebeesserver.onrender.com' 
+  : 'ws://localhost:4000';
+
+const socket: Socket = io(SOCKET_URL, {
+  path: '/socket.io/',
+  transports: ['websocket'], // Try websocket only first
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: 20000,
+  autoConnect: true,
+  forceNew: true,
+  withCredentials: true
+});
 
 const COUNTDOWN = 3; // seconds
 

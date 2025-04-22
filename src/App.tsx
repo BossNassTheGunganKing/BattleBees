@@ -241,14 +241,20 @@ const App: React.FC = () => {
     const newRoomId = generateRoomId();
     console.log('Creating room with ID:', newRoomId);
 
-    // Only emit the create room event and wait for server confirmation
+    setLoading(true);
+    
+    // First create the room, then join it
     socket.emit('createRoom', { 
       roomId: newRoomId,
       playerName
+    }, () => {
+      // After room is created, automatically join it
+      console.log('Room created, joining as creator:', { roomId: newRoomId, playerName });
+      socket.emit('joinRoom', {
+        roomId: newRoomId,
+        playerName
+      });
     });
-
-    // Don't set game state here - wait for 'joinConfirmed' event
-    setLoading(true);
   };
 
   const handleJoinRoom = (roomId: string, playerName: string) => {
@@ -293,6 +299,16 @@ const App: React.FC = () => {
       roomId: game.roomId 
     });
   };
+
+  if (loading) {
+    return (
+      <div className="app-container">
+        <div className="loading-screen">
+          <h2>Creating room...</h2>
+        </div>
+      </div>
+    );
+  }
 
   if (!game.roomExists) {
     return (
