@@ -11,7 +11,7 @@ const debug = require('debug')('battlebees:server');
 
 const app = express();
 const httpServer = createServer(app);
-const PORT = "https://battlebeesserver.onrender.com";
+const PORT = process.env.PORT;
 
 // Update CORS configuration for Express
 app.use(cors({
