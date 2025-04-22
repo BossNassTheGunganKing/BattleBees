@@ -47,12 +47,8 @@ app.get('/debug/rooms', (req, res) => {
   });
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
-// Update Socket.IO configuration
-const io = new Server( httpServer, {
+// Create Socket.IO instance with the httpServer
+const io = new Server(httpServer, {
   cors: {
     origin: [
       'http://localhost:5173',
@@ -64,8 +60,9 @@ const io = new Server( httpServer, {
   }
 });
 
+// Single listen call on httpServer
 httpServer.listen(PORT, () => {
-  console.log(`Socket.IO server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
 
 const rooms = {};
