@@ -140,6 +140,7 @@ const App: React.FC = () => {
         errorMessage: message,
         roomExists: false
       }));
+      setLoading(false);  // Add this line to clear loading state on error
     });
 
     socket.on('gameState', (state) => {
@@ -156,6 +157,7 @@ const App: React.FC = () => {
         ...prev,
         errorMessage: 'Connection failed. Trying to reconnect...'
       }));
+      setLoading(false);  // Add this line to clear loading state on connection error
     });
 
     socket.on('playerJoined', ({ players }) => {
@@ -216,6 +218,11 @@ const App: React.FC = () => {
       setCurrentScreen(GameScreenEnum.WAITING);
     });
 
+    socket.on('error', (error) => {
+      console.error('Socket error:', error);
+      setLoading(false);  // Clear loading state on any socket error
+    });
+
     return () => {
       socket.off('connect');
       socket.off('joinConfirmed');
@@ -230,6 +237,7 @@ const App: React.FC = () => {
       socket.off('gameStarted');
       socket.off('gameOver');
       socket.off('returnToLobby');
+      socket.off('error');
     };
   }, []);
 
@@ -243,11 +251,21 @@ const App: React.FC = () => {
 
     setLoading(true);
     
+    // Add timeout to clear loading state if no response
+    const timeout = setTimeout(() => {
+      setLoading(false);
+      setGame(prev => ({
+        ...prev,
+        errorMessage: 'Room creation timed out. Please try again.'
+      }));
+    }, 10000); // 10 second timeout
+
     // First create the room, then join it
     socket.emit('createRoom', { 
       roomId: newRoomId,
       playerName
     }, () => {
+      clearTimeout(timeout); // Clear timeout on success
       // After room is created, automatically join it
       console.log('Room created, joining as creator:', { roomId: newRoomId, playerName });
       socket.emit('joinRoom', {
