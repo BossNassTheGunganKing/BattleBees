@@ -110,7 +110,10 @@ const App: React.FC = () => {
     });
 
     socket.on('joinConfirmed', ({ playerId, letters, centerLetter, players, roomId, roomExists }) => {
+      console.log('Join confirmed with data:', { playerId, roomId, players });
+      
       if (!roomExists) {
+        setLoading(false);
         setGame(prev => ({
           ...prev,
           errorMessage: 'Room does not exist',
@@ -119,7 +122,6 @@ const App: React.FC = () => {
         return;
       }
       
-      console.log('Join confirmed:', { playerId, roomId, players });
       setGame(prev => ({
         ...prev,
         currentPlayerId: playerId,
@@ -135,12 +137,25 @@ const App: React.FC = () => {
     });
 
     socket.on('roomError', (message) => {
+      console.error('Room error:', message);
+      setLoading(false);
       setGame(prev => ({
         ...prev,
         errorMessage: message,
         roomExists: false
       }));
-      setLoading(false);  // Add this line to clear loading state on error
+    });
+
+    // Add specific handler for disconnect during room creation/joining
+    socket.on('disconnect', (reason) => {
+      console.log('Disconnected:', reason);
+      if (loading) {
+        setLoading(false);
+        setGame(prev => ({
+          ...prev,
+          errorMessage: 'Connection lost while creating/joining room'
+        }));
+      }
     });
 
     socket.on('gameState', (state) => {
@@ -239,7 +254,7 @@ const App: React.FC = () => {
       socket.off('returnToLobby');
       socket.off('error');
     };
-  }, []);
+  }, [loading]);
 
   const generateRoomId = () => {
     return Math.random().toString(36).substring(2, 7).toUpperCase();
@@ -248,7 +263,7 @@ const App: React.FC = () => {
   const handleCreateRoom = (playerName: string) => {
     const newRoomId = generateRoomId();
     console.log('Creating room with ID:', newRoomId);
-
+  
     setLoading(true);
     
     // Add timeout to clear loading state if no response
@@ -258,20 +273,25 @@ const App: React.FC = () => {
         ...prev,
         errorMessage: 'Room creation timed out. Please try again.'
       }));
-    }, 10000); // 10 second timeout
-
-    // First create the room, then join it
-    socket.emit('createRoom', { 
-      roomId: newRoomId,
-      playerName
-    }, () => {
-      clearTimeout(timeout); // Clear timeout on success
-      // After room is created, automatically join it
-      console.log('Room created, joining as creator:', { roomId: newRoomId, playerName });
-      socket.emit('joinRoom', {
-        roomId: newRoomId,
-        playerName
-      });
+    }, 10000);
+  
+    // Emit createRoom event and wait for acknowledgment
+    socket.emit('createRoom', { roomId: newRoomId, playerName }, (error: any) => {
+      clearTimeout(timeout);
+      
+      if (error) {
+        console.error('Room creation error:', error);
+        setLoading(false);
+        setGame(prev => ({
+          ...prev,
+          errorMessage: error.message || 'Failed to create room'
+        }));
+        return;
+      }
+  
+      // After successful room creation, join the room
+      console.log('Room created successfully, joining as creator');
+      socket.emit('joinRoom', { roomId: newRoomId, playerName });
     });
   };
 
