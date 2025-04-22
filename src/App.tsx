@@ -7,32 +7,37 @@ import { GameScreen } from './components/GameScreen';
 import { VictoryScreen } from './components/VictoryScreen';
 
 const SOCKET_URL = import.meta.env.PROD 
-  ? 'https://battlebeesserver.onrender.com' 
-  : 'http://localhost:4000';
+  ? 'wss://battlebeesserver.onrender.com' 
+  : 'ws://localhost:4000';
 
 const socket: Socket = io(SOCKET_URL, {
   path: '/socket.io/',
-  transports: ['websocket', 'polling'],
+  transports: ['websocket'], // Try websocket only first
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
   reconnectionDelayMax: 5000,
   timeout: 20000,
-  autoConnect: true
+  autoConnect: true,
+  forceNew: true,
+  withCredentials: true
 });
 
-// Add connection monitoring
-socket.on('connect', () => {
-  console.log('Connected to server via', socket.io.engine.transport.name);
-});
-
+// Enhanced error logging
 socket.on('connect_error', (error) => {
   console.error('Connection error:', error);
-  console.log('Connection details:', {
-    url: SOCKET_URL,
-    transport: socket.io.engine.transport.name,
-    connected: socket.connected,
-    id: socket.id
-  });
+  console.log('Attempting to reconnect with polling...');
+  
+  // If WebSocket fails, try polling
+  socket.io.opts.transports = ['polling', 'websocket'];
+});
+
+// Add connection state logging
+socket.on('connect', () => {
+  console.log('Connected successfully via:', socket.io.engine.transport.name);
+});
+
+socket.on('disconnect', (reason) => {
+  console.log('Disconnected:', reason);
 });
 
 type Player = {
