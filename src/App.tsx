@@ -6,7 +6,7 @@ import { WaitingRoom } from './components/WaitingRoom';
 import { GameScreen } from './components/GameScreen';
 import { VictoryScreen } from './components/VictoryScreen';
 
-const SOCKET_URL = "https://battlebeesserver.onrender.com";
+const SOCKET_URL = "wss://battlebeesserver.onrender.com";
 
 const socket: Socket = io(SOCKET_URL, {
   reconnectionAttempts: 5,
