@@ -27,16 +27,6 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
 }) => {
   const [countdown, setCountdown] = useState<number | null>(null);
 
-  const startCountdown = () => {
-    console.log('Requesting countdown start');
-    socket.emit('startCountdown', { roomId });
-  };
-
-  const cancelCountdown = () => {
-    console.log('Requesting countdown cancel');
-    socket.emit('cancelCountdown', { roomId });
-  };
-
   useEffect(() => {
     const handleCountdownUpdate = ({ timeLeft }: { timeLeft: number }) => {
       console.log('Countdown update received:', timeLeft);
@@ -63,7 +53,17 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
       socket.off('countdownCancelled', handleCountdownCancel);
       socket.off('gameStarted', handleGameStart);
     };
-  }, [onStartGame, roomId]);
+  }, [onStartGame, socket]);
+
+  const startCountdown = () => {
+    console.log('Requesting countdown start for room:', roomId);
+    socket.emit('startCountdown', { roomId });
+  };
+
+  const cancelCountdown = () => {
+    console.log('Requesting countdown cancel for room:', roomId);
+    socket.emit('cancelCountdown', { roomId });
+  };
 
   return (
     <div className="waiting-room">
@@ -74,12 +74,17 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
           <p className="room-id-helper">Share this code with other players</p>
         </div>
 
-        {/* New countdown display section */}
         {countdown !== null && (
-          <div className="countdown-container">
-            <div className="countdown-display">
+          <div className="countdown-overlay">
+            <div className="countdown-modal">
               <h2>Game Starting In</h2>
               <div className="countdown-number">{countdown}</div>
+              <button 
+                onClick={cancelCountdown}
+                className="cancel-button"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         )}
@@ -97,11 +102,11 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
       </div>
 
       <button 
-        onClick={countdown === null ? startCountdown : cancelCountdown}
-        disabled={players.length < 2}
-        className={countdown === null ? "start-game-button" : "cancel-button"}
+        onClick={startCountdown}
+        disabled={players.length < 2 || countdown !== null}
+        className="start-game-button"
       >
-        {countdown === null ? "Start Game" : "Cancel Countdown"}
+        Start Game
       </button>
     </div>
   );

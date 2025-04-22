@@ -164,17 +164,20 @@ io.on('connection', (socket) => {
 
     socket.join(roomId);
 
-    // Send confirmation with room details
+    // Send explicit joinConfirmed event to the room creator
     socket.emit('joinConfirmed', {
       playerId: socket.id,
       roomId,
       letters: rooms[roomId].letters,
       centerLetter: rooms[roomId].centerLetter,
-      players: Object.values(rooms[roomId].players)
+      players: Object.values(rooms[roomId].players),
+      roomExists: true
     });
 
     // Broadcast initial room state
     broadcastGameState(roomId);
+    
+    console.log(`Room ${roomId} created and joined by ${playerName}`);
   });
 
   socket.on('joinRoom', ({ roomId, playerName }) => {

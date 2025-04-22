@@ -7,19 +7,17 @@ import { GameScreen } from './components/GameScreen';
 import { VictoryScreen } from './components/VictoryScreen';
 
 const SOCKET_URL = import.meta.env.PROD 
-  ? 'wss://battlebeesserver.onrender.com' 
-  : 'ws://localhost:4000';
+  ? 'https://battlebeesserver.onrender.com' 
+  : 'http://localhost:4000';
 
 const socket: Socket = io(SOCKET_URL, {
   path: '/socket.io/',
-  transports: ['websocket'], // Try websocket only first
+  transports: ['polling', 'websocket'], // Try polling first, then websocket
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
   reconnectionDelayMax: 5000,
   timeout: 20000,
-  autoConnect: true,
-  forceNew: true,
-  withCredentials: true
+  autoConnect: true
 });
 
 // Enhanced error logging
@@ -263,35 +261,11 @@ const App: React.FC = () => {
   const handleCreateRoom = (playerName: string) => {
     const newRoomId = generateRoomId();
     console.log('Creating room with ID:', newRoomId);
-  
-    setLoading(true);
     
-    // Add timeout to clear loading state if no response
-    const timeout = setTimeout(() => {
-      setLoading(false);
-      setGame(prev => ({
-        ...prev,
-        errorMessage: 'Room creation timed out. Please try again.'
-      }));
-    }, 10000);
-  
-    // Emit createRoom event and wait for acknowledgment
-    socket.emit('createRoom', { roomId: newRoomId, playerName }, (error: any) => {
-      clearTimeout(timeout);
-      
-      if (error) {
-        console.error('Room creation error:', error);
-        setLoading(false);
-        setGame(prev => ({
-          ...prev,
-          errorMessage: error.message || 'Failed to create room'
-        }));
-        return;
-      }
-  
-      // After successful room creation, join the room
-      console.log('Room created successfully, joining as creator');
-      socket.emit('joinRoom', { roomId: newRoomId, playerName });
+    setLoading(true);
+    socket.emit('createRoom', { 
+      roomId: newRoomId, 
+      playerName 
     });
   };
 
