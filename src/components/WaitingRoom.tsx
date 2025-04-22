@@ -1,23 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { io, Socket } from 'socket.io-client';
-import './WaitingRoom.css'; // Import your CSS file for styling
+import { Socket } from 'socket.io-client';
+import './WaitingRoom.css';
 import '../App.css';
-
-const SOCKET_URL = import.meta.env.PROD 
-  ? 'wss://battlebeesserver.onrender.com' 
-  : 'ws://localhost:4000';
-
-const socket: Socket = io(SOCKET_URL, {
-  path: '/socket.io/',
-  transports: ['websocket'], // Try websocket only first
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000,
-  reconnectionDelayMax: 5000,
-  timeout: 20000,
-  autoConnect: true,
-  forceNew: true,
-  withCredentials: true
-});
 
 const COUNTDOWN = 3; // seconds
 
@@ -32,44 +16,48 @@ interface WaitingRoomProps {
   roomId: string;
   players: Player[];
   onStartGame: () => void;
+  socket: Socket;
 }
 
-export const WaitingRoom: React.FC<WaitingRoomProps> = ({ roomId, players, onStartGame }) => {
+export const WaitingRoom: React.FC<WaitingRoomProps> = ({ 
+  roomId, 
+  players, 
+  onStartGame,
+  socket
+}) => {
   const [countdown, setCountdown] = useState<number | null>(null);
 
   const startCountdown = () => {
-    console.log('Requesting countdown start'); // Debug log
+    console.log('Requesting countdown start');
     socket.emit('startCountdown', { roomId });
   };
 
   const cancelCountdown = () => {
-    console.log('Requesting countdown cancel'); // Debug log
+    console.log('Requesting countdown cancel');
     socket.emit('cancelCountdown', { roomId });
   };
 
   useEffect(() => {
     const handleCountdownUpdate = ({ timeLeft }: { timeLeft: number }) => {
-      console.log('Countdown update received:', timeLeft); // Debug log
+      console.log('Countdown update received:', timeLeft);
       setCountdown(timeLeft);
     };
 
     const handleCountdownCancel = () => {
-      console.log('Countdown cancelled'); // Debug log
+      console.log('Countdown cancelled');
       setCountdown(null);
     };
 
     const handleGameStart = () => {
-      console.log('Game started'); // Debug log
+      console.log('Game started');
       setCountdown(null);
       onStartGame();
     };
 
-    // Add socket listeners
     socket.on('countdownUpdate', handleCountdownUpdate);
     socket.on('countdownCancelled', handleCountdownCancel);
     socket.on('gameStarted', handleGameStart);
 
-    // Cleanup listeners
     return () => {
       socket.off('countdownUpdate', handleCountdownUpdate);
       socket.off('countdownCancelled', handleCountdownCancel);

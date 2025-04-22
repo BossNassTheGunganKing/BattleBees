@@ -365,6 +365,7 @@ const App: React.FC = () => {
           roomId={game.roomId}
           players={game.players}
           onStartGame={handleStartGame}
+          socket={socket}
         />
       )}
       {currentScreen === GameScreenEnum.PLAYING && (
