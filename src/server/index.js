@@ -1,8 +1,8 @@
 const express = require('express');
+const { Server } = require('socket.io');
+const { createServer } = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
-const { Server } = require("socket.io");
-const { createServer } = require("http");
 const axios = require('axios'); // Add axios for API calls
 const fs = require('fs');
 const path = require('path');
@@ -11,7 +11,7 @@ const debug = require('debug')('battlebees:server');
 
 const app = express();
 const httpServer = createServer(app);
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 4000;
 
 // Update CORS configuration for Express
 app.use(cors({
@@ -47,22 +47,27 @@ app.get('/debug/rooms', (req, res) => {
   });
 });
 
-// Create Socket.IO instance with the httpServer
+// Update Socket.IO configuration
 const io = new Server(httpServer, {
+  path: '/socket.io/', // Explicit socket.io path
   cors: {
     origin: [
       'http://localhost:5173',
       'https://battlebees.onrender.com'
     ],
     methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
-  }
+  },
+  transports: ['websocket', 'polling'], // Prefer WebSocket, fallback to polling
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  maxHttpBufferSize: 1e8
 });
 
 // Single listen call on httpServer
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`WebSocket server available at wss://battlebeesserver.onrender.com`);
 });
 
 const rooms = {};

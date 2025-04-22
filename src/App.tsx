@@ -6,33 +6,33 @@ import { WaitingRoom } from './components/WaitingRoom';
 import { GameScreen } from './components/GameScreen';
 import { VictoryScreen } from './components/VictoryScreen';
 
-const SOCKET_URL = "wss://battlebeesserver.onrender.com";
+const SOCKET_URL = import.meta.env.PROD 
+  ? 'https://battlebeesserver.onrender.com' 
+  : 'http://localhost:4000';
 
 const socket: Socket = io(SOCKET_URL, {
+  path: '/socket.io/',
+  transports: ['websocket', 'polling'],
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
   reconnectionDelayMax: 5000,
   timeout: 20000,
-  autoConnect: true,
-  transports: ['polling', 'websocket'], // Change order to try polling first
-  withCredentials: true, // Add this for CORS
-  path: '/socket.io/', // Explicitly set the path
-  forceNew: true, // Force a new connection
+  autoConnect: true
 });
 
-// Enhance error logging
-socket.on('connect_error', (error) => {
-  console.error('Connection error:', error.message);
-  console.error('Connection error details:', {
-    transport: socket.io.engine.transport.name,
-    url: SOCKET_URL,
-    readyState: socket.io.engine.readyState
-  });
-});
-
+// Add connection monitoring
 socket.on('connect', () => {
-  console.log('Successfully connected to server');
-  console.log('Transport:', socket.io.engine.transport.name);
+  console.log('Connected to server via', socket.io.engine.transport.name);
+});
+
+socket.on('connect_error', (error) => {
+  console.error('Connection error:', error);
+  console.log('Connection details:', {
+    url: SOCKET_URL,
+    transport: socket.io.engine.transport.name,
+    connected: socket.connected,
+    id: socket.id
+  });
 });
 
 type Player = {
