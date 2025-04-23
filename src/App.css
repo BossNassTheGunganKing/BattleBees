@@ -318,6 +318,7 @@
 
 .welcome-title {
   color: black;
+  padding-bottom: 1.5rem;
 }
 
 .input-group {
@@ -473,7 +474,8 @@
 }
 
 .welcome-title {
-  color: black; /* Dark green text */
+  color: black;
+  padding-bottom: 1.5rem;
 }
 
 .join-button {

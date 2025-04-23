@@ -355,28 +355,6 @@ const App: React.FC = () => {
     );
   }
 
-  // if (game.gameOver) {
-  //   return (
-  //     <div className="app-container">
-  //       <div className="game-over-screen">
-  //         <h1>Game Over!</h1>
-  //         <p className="game-over-reason">{game.gameOverReason}</p>
-  //         <div className="final-scores">
-  //           <h2>Final Scores</h2>
-  //           {game.players.map((player) => (
-  //             <div key={player.id} className={`final-score ${player.id === game.currentPlayerId ? 'your-score' : ''}`}>
-  //               {player.name}: {player.score} points
-  //             </div>
-  //           ))}
-  //         </div>
-  //         <button onClick={restartGame} className="play-again-button">
-  //           Play Again
-  //         </button>
-  //       </div>
-  //     </div>
-  //   );
-  // }
-
   return (
     <div className="app-container">
       {currentScreen === GameScreenEnum.LOBBY && (
@@ -392,6 +370,7 @@ const App: React.FC = () => {
           players={game.players}
           onStartGame={handleStartGame}
           socket={socket}
+          gameSettings={game.gameSettings}
         />
       )}
       {currentScreen === GameScreenEnum.PLAYING && (

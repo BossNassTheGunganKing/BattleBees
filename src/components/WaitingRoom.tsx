@@ -23,18 +23,20 @@ interface WaitingRoomProps {
   players: Player[];
   onStartGame: () => void;
   socket: Socket;
+  gameSettings?: GameSettings;
 }
 
 export const WaitingRoom: React.FC<WaitingRoomProps> = ({ 
   roomId, 
   players, 
   onStartGame,
-  socket
+  socket,
+  gameSettings: initialGameSettings
 }) => {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [showCopied, setShowCopied] = useState(false);
-  const [gameSettings, setGameSettings] = useState<GameSettings>({
-    pointsToWin: 25,
+  const [gameSettings, setGameSettings] = useState<GameSettings>(initialGameSettings || {
+    pointsToWin: 30,
     isPanagramInstantWin: true,
     totalWordsToWin: 10
   });
@@ -61,16 +63,25 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
       setGameSettings(settings);
     };
 
+    const handleGameState = (state: any) => {
+      if (state.gameSettings) {
+        console.log('Game settings received from state:', state.gameSettings);
+        setGameSettings(state.gameSettings);
+      }
+    };
+
     socket.on('countdownUpdate', handleCountdownUpdate);
     socket.on('countdownCancelled', handleCountdownCancel);
     socket.on('gameStarted', handleGameStart);
     socket.on('gameSettingsUpdate', handleGameSettingsUpdate);
+    socket.on('gameState', handleGameState);
 
     return () => {
       socket.off('countdownUpdate', handleCountdownUpdate);
       socket.off('countdownCancelled', handleCountdownCancel);
       socket.off('gameStarted', handleGameStart);
       socket.off('gameSettingsUpdate', handleGameSettingsUpdate);
+      socket.off('gameState', handleGameState);
     };
   }, [onStartGame, socket]);
 
