@@ -60,12 +60,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   }, [serverError]);
 
   const showError = (message: string) => {
+    setIsShaking(false); // Reset shake state first
     setErrorMessage(message);
-    setIsShaking(true);
-    setTimeout(() => {
-      setIsShaking(false);
-      setTimeout(() => setErrorMessage(''), 1000); // Clear error after shake
-    }, 500);
+    // Use requestAnimationFrame to ensure the reset is processed before setting shake again
+    requestAnimationFrame(() => {
+      setIsShaking(true);
+      setTimeout(() => {
+        setIsShaking(false);
+      }, 500);
+    });
   };
 
   const shuffleLetters = () => {
