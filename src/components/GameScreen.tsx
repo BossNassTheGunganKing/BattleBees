@@ -37,9 +37,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [enteredWord, setEnteredWord] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isShaking, setIsShaking] = useState(false);
+  const [shuffledLetters, setShuffledLetters] = useState(letters);
   
   const currentPlayer = players.find(p => p.id === currentPlayerId);
   const otherPlayers = players.filter(p => p.id !== currentPlayerId);
+
+  // Reset shuffled letters when new letters come in
+  useEffect(() => {
+    setShuffledLetters(letters);
+  }, [letters]);
 
   if (!currentPlayer) {
     console.error('No current player found:', { currentPlayerId, players });
@@ -60,6 +66,23 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       setIsShaking(false);
       setTimeout(() => setErrorMessage(''), 1000); // Clear error after shake
     }, 500);
+  };
+
+  const shuffleLetters = () => {
+    const surroundingLetters = shuffledLetters.filter(l => l !== centerLetter);
+    const shuffled = [...surroundingLetters];
+    
+    // Fisher-Yates shuffle algorithm
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    
+    // Reconstruct the letters array with center letter in its original position
+    const centerIndex = letters.indexOf(centerLetter);
+    const newLetters = [...shuffled];
+    newLetters.splice(centerIndex, 0, centerLetter);
+    setShuffledLetters(newLetters);
   };
 
   const validateWord = (word: string): string | null => {
@@ -112,7 +135,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </div>
 
         <div className="game-center">
-          {renderHoneycomb(letters, centerLetter)}
+          {renderHoneycomb(shuffledLetters, centerLetter)}
+          <button 
+            onClick={shuffleLetters} 
+            className="shuffle-button"
+            aria-label="Shuffle letters"
+          >
+            🔄 Shuffle
+          </button>
           <form onSubmit={handleSubmit} className="word-input-form">
             <input
               type="text"

@@ -95,33 +95,29 @@ function getRandomLetterSet() {
   try {
     const fileContent = fs.readFileSync(path.join(__dirname, 'gameLetters.csv'));
     const records = csv.parse(fileContent, {
-      columns: true,
+      columns: false,  // Changed to false since we don't have headers
       skip_empty_lines: true
     });
 
     // Select random row from CSV
     const randomRow = records[Math.floor(Math.random() * records.length)];
     
-    // Ensure we get exactly 7 letters
-    const letters = Array.from(randomRow.letters).filter(char => 
-      char.match(/[A-Z]/)
-    ).slice(0, 7);
+    // Get the letters from the row - should be a single string of 7 letters
+    const letterString = randomRow[0];
+    
+    // First letter is the center letter, rest are surrounding letters
+    const centerLetter = letterString[0];
+    const letters = Array.from(letterString);
 
     // Validate letter count
     if (letters.length !== 7) {
-      console.error('Invalid letter count in CSV row:', randomRow);
+      console.error('Invalid letter count in CSV row:', letterString);
       throw new Error('Invalid letter count');
-    }
-
-    // Validate center letter is in the set
-    if (!letters.includes(randomRow.centerLetter)) {
-      console.error('Center letter not in letter set:', randomRow);
-      throw new Error('Invalid center letter');
     }
 
     return {
       letters,
-      centerLetter: randomRow.centerLetter
+      centerLetter
     };
   } catch (error) {
     console.error('Error reading game letters:', error);
