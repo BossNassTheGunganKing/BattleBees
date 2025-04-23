@@ -32,6 +32,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
   socket
 }) => {
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [showCopied, setShowCopied] = useState(false);
   const [gameSettings, setGameSettings] = useState<GameSettings>({
     pointsToWin: 25,
     isPanagramInstantWin: true,
@@ -86,7 +87,17 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
   const updateGameSettings = (updates: Partial<GameSettings>) => {
     const newSettings = { ...gameSettings, ...updates };
     setGameSettings(newSettings);
-    socket.emit('updateGameSettings', { roomId, settings: newSettings });
+    socket.emit('updateGameSettings', { 
+      roomId, 
+      settings: newSettings 
+    });
+  };
+
+  const copyRoomCode = () => {
+    navigator.clipboard.writeText(roomId).then(() => {
+      setShowCopied(true);
+      setTimeout(() => setShowCopied(false), 2000); // Hide after 2 seconds
+    });
   };
 
   return (
@@ -94,8 +105,15 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
       <div className="room-info">
         <div className="room-id-container">
           <h2>Room Code:</h2>
-          <div className="room-id">{roomId}</div>
-          <p className="room-id-helper">Share this code with other players</p>
+          <div 
+            className="room-id" 
+            onClick={copyRoomCode}
+            style={{ cursor: 'pointer' }}
+          >
+            {roomId}
+            {showCopied && <div className="copied-notification">Copied!</div>}
+          </div>
+          <p className="room-id-helper">Click the code to copy to clipboard</p>
         </div>
 
         <div className="game-settings">

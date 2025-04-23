@@ -63,6 +63,11 @@ type GameState = {
     foundWords: string[];
     winReason: string;
   } | null; // Make winner explicitly nullable
+  gameSettings?: {
+    pointsToWin: number;
+    isPanagramInstantWin: boolean;
+    totalWordsToWin: number;
+  };
 };
 
 type GameStateUpdate = {
@@ -397,6 +402,7 @@ const App: React.FC = () => {
           currentPlayerId={game.currentPlayerId}
           onSubmitWord={handleSubmit}
           serverError={game.errorMessage} // Add this prop
+          gameSettings={game.gameSettings}
         />
       )}
       {currentScreen === GameScreenEnum.VICTORY && game.winner && (

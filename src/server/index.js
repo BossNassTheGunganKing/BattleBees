@@ -151,7 +151,12 @@ io.on('connection', (socket) => {
       letters,
       centerLetter,
       players: {},
-      gameStarted: false
+      gameStarted: false,
+      gameSettings: {
+        pointsToWin: 30,
+        isPanagramInstantWin: true,
+        totalWordsToWin: 10
+      }
     };
 
     // Add the creating player to the room
@@ -297,17 +302,17 @@ io.on('connection', (socket) => {
 
     // Check win conditions with explicit comparisons
     const hasWon = (
-      player.foundWords.length >= 10 || 
-      player.score >= 30 || 
-      isPangram === true
+      player.score >= rooms[roomId].gameSettings.pointsToWin || 
+      player.foundWords.length >= rooms[roomId].gameSettings.totalWordsToWin || 
+      (isPangram && rooms[roomId].gameSettings.isPanagramInstantWin)
     );
 
     if (hasWon) {
-      console.log('Game won!', {
-        player: player.name,
-        reason: isPangram ? 'pangram' : 
-                player.foundWords.length >= 10 ? 'words' : 'score'
-      });
+      const winReason = isPangram && rooms[roomId].gameSettings.isPanagramInstantWin 
+        ? 'Found a pangram!' 
+        : player.foundWords.length >= rooms[roomId].gameSettings.totalWordsToWin 
+          ? `Found ${rooms[roomId].gameSettings.totalWordsToWin} words!`
+          : `Reached ${rooms[roomId].gameSettings.pointsToWin} points!`;
 
       rooms[roomId].gameOver = true;
       rooms[roomId].winner = {
@@ -315,12 +320,9 @@ io.on('connection', (socket) => {
         name: player.name,
         score: player.score,
         foundWords: player.foundWords,
-        winReason: isPangram ? 'Found a pangram!' : 
-                   player.foundWords.length >= 10 ? 'Found 10 words!' :
-                   'Reached 30 points!'
+        winReason
       };
 
-      // Notify all players of game end
       io.to(roomId).emit('gameOver', {
         winner: rooms[roomId].winner
       });
@@ -472,6 +474,18 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('updateGameSettings', ({ roomId, settings }) => {
+    if (!rooms[roomId]) return;
+    
+    rooms[roomId].gameSettings = {
+      ...rooms[roomId].gameSettings,
+      ...settings
+    };
+    
+    // Broadcast updated game state to all players
+    broadcastGameState(roomId);
+  });
+
   function broadcastGameState(roomId) {
     if (!rooms[roomId]) {
       debug(`Cannot broadcast - Room ${roomId} not found`);
@@ -486,7 +500,8 @@ io.on('connection', (socket) => {
       gameStarted: rooms[roomId].gameStarted,
       gameOver: rooms[roomId].gameOver,
       winner: rooms[roomId].winner,
-      countdownActive: rooms[roomId].countdownActive || false
+      countdownActive: rooms[roomId].countdownActive || false,
+      gameSettings: rooms[roomId].gameSettings
     };
 
     debug(`Broadcasting game state for room ${roomId}:`, gameState);

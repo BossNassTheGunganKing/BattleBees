@@ -318,8 +318,6 @@
 
 .welcome-title {
   color: black;
-  font-size: 2rem;
-  margin-bottom: 2rem;
 }
 
 .input-group {
@@ -338,6 +336,7 @@
   outline: none;
   transition: border 0.3s ease;
   background: white;
+  color: black;
 }
 
 .username-input:focus {
@@ -380,6 +379,7 @@
 
 .game-description p {
   margin: 0.5rem 0;
+  color: black;
 }
 
 /* Game Over Screen */
@@ -702,5 +702,60 @@
 /* Ensure all text is black */
 h1, h2, h3, h4, h5, h6, p, span, div, input, button {
   color: black;
+}
+
+.username-screen .username-container {
+  background: #ffe88a;
+  padding: 3rem;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  text-align: center;
+  max-width: 500px;
+  width: 100%;
+  color: #000000;
+}
+
+.username-screen .welcome-title {
+  color: black;
+}
+
+.username-screen .game-description p {
+  color: black;
+}
+
+.username-screen .error-message p {
+  color: #d32f2f;
+}
+
+.username-screen .username-input {
+  color: black;
+}
+
+.win-conditions {
+  background: #ffe88a;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+.win-conditions h3 {
+  color: #000000;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.win-conditions ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.win-conditions li {
+  color: #000000;
+  padding: 0.5rem;
+  margin: 0.25rem 0;
+  background: #ffd966;
+  border-radius: 4px;
+  font-size: 0.9rem;
 }
 

@@ -14,6 +14,11 @@ interface GameScreenProps {
   currentPlayerId: string;
   onSubmitWord: (word: string) => void;
   serverError?: string;
+  gameSettings?: {
+    pointsToWin: number;
+    isPanagramInstantWin: boolean;
+    totalWordsToWin: number;
+  };
 }
 
 export const GameScreen: React.FC<GameScreenProps> = ({
@@ -22,7 +27,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   players,
   currentPlayerId,
   onSubmitWord,
-  serverError
+  serverError,
+  gameSettings = {
+    pointsToWin: 30,
+    isPanagramInstantWin: true,
+    totalWordsToWin: 10
+  }
 }) => {
   const [enteredWord, setEnteredWord] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -131,6 +141,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 ))}
               </ul>
             </div>
+          </div>
+          <div className="win-conditions">
+            <h3>Win Conditions</h3>
+            <ul>
+              <li>Score {gameSettings.pointsToWin} points</li>
+              <li>Find {gameSettings.totalWordsToWin} words</li>
+              {gameSettings.isPanagramInstantWin && (
+                <li>Find a pangram (use all letters)</li>
+              )}
+            </ul>
           </div>
         </div>
       </div>
