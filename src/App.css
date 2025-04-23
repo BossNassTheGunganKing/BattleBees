@@ -20,8 +20,8 @@
 /* Game Header */
 .game-header {
   width: 100%;
-  background: linear-gradient(to right, #4a8c4a, #2e5e2e); /* Green gradient */
-  color: white;
+  background: linear-gradient(to right, #e69b0f, #f5a524);
+  color: black;
   padding: 1.5rem;
   text-align: center;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -46,7 +46,7 @@
   max-height: 115px;
   min-width: 60px;
   min-height: 70px;
-  background: #FFD700;
+  background: #ffcc33;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -55,6 +55,10 @@
   margin: 0 0.5vw;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   transition: all 0.3s ease;
+}
+
+.honeycomb-cell.center-letter {
+  background: #e69b0f;
 }
 
 /* Updated honeycomb structure without empty cells */
@@ -79,27 +83,61 @@
   display: flex;
   gap: 10px;
   justify-content: center;
+  position: relative;
 }
 
 .word-input-form input {
   flex: 1;
   padding: 1rem;
   font-size: 1.2rem;
-  border: 2px solid #ddd;
+  border: 2px solid #ffd966;
   border-radius: 8px;
   outline: none;
   transition: border 0.3s ease;
+  color: black;
+  background: white;
 }
 
-.word-input-form input:focus {
-  border-color: #667eea;
+.word-input-form input.shake {
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+.word-input-form .error-message {
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #d32f2f;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.word-input-form .error-message.visible {
+  opacity: 1;
+}
+
+@keyframes shake {
+  10%, 90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+  20%, 80% {
+    transform: translate3d(2px, 0, 0);
+  }
+  30%, 50%, 70% {
+    transform: translate3d(-3px, 0, 0);
+  }
+  40%, 60% {
+    transform: translate3d(3px, 0, 0);
+  }
 }
 
 .word-input-form button {
   padding: 1rem 2rem;
   font-size: 1.2rem;
-  background: linear-gradient(to right, #667eea, #764ba2);
-  color: white;
+  background: linear-gradient(to right, #e69b0f, #f5a524);
+  color: black;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -121,15 +159,17 @@
 .word-input {
   padding: 8px 12px;
   font-size: 1.1rem;
-  border: 2px solid #4a8c4a;
+  border: 2px solid #e69b0f;
   border-radius: 4px;
   width: 200px;
+  color: black;
+  background: white;
 }
 
 .submit-button {
   padding: 8px 16px;
-  background-color: #4a8c4a;
-  color: white;
+  background-color: #e69b0f;
+  color: black;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -137,7 +177,7 @@
 }
 
 .submit-button:hover {
-  background-color: #3a7c3a;
+  background-color: #f5a524;
 }
 
 /* Scoreboard */
@@ -151,12 +191,12 @@
 }
 
 .player-score {
-  background: #e9f5ff;
+  background: #ffe88a;
   padding: 1rem;
   border-radius: 8px;
   text-align: center;
   font-size: 1.1rem;
-  color: #000000;
+  color: black;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -171,10 +211,9 @@
 }
 
 .current-player {
-  background: #d0e8ff;
+  background: #ffd966;
   font-weight: bold;
-  box-shadow: 0 0 0 2px #667eea;
-  background-color: #f0f0f0; /* Light gray background to highlight current player */
+  box-shadow: 0 0 0 2px #e69b0f;
   border-radius: 4px;
   padding: 8px;
 }
@@ -182,7 +221,7 @@
 .current-player h3::before {
   content: "(me) ";
   font-size: 0.9em;
-  color: #4a8c4a;
+  color: black;
   font-weight: normal;
 }
 
@@ -206,11 +245,12 @@
 }
 
 .found-word {
-  background: #000000;
+  background: #ffd966;
   padding: 0.8rem;
   border-radius: 8px;
   text-align: center;
   font-size: 1.1rem;
+  color: black;
 }
 
 .found-words {
@@ -228,11 +268,11 @@
 }
 
 .found-words li {
-  background-color: #f0f0f0;
+  background-color: #ffe88a;
   padding: 0.5rem;
   border-radius: 4px;
   font-size: 0.9rem;
-  color: #000000;
+  color: black;
 }
 
 /* Error Message */
@@ -249,15 +289,16 @@
   text-align: center;
   margin-top: 2rem;
   padding: 1rem;
-  background: #87ad1d;
+  background: #ffcc33;
   border-radius: 8px;
+  color: black;
 }
 
 /* Username Screen */
 .username-screen {
   width: 100vw;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #e69b0f 0%, #f5a524 100%);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -265,7 +306,7 @@
 }
 
 .username-container {
-  background: white;
+  background: #ffe88a;
   padding: 3rem;
   border-radius: 15px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.2);
@@ -276,7 +317,7 @@
 }
 
 .welcome-title {
-  color: #764ba2;
+  color: black;
   font-size: 2rem;
   margin-bottom: 2rem;
 }
@@ -291,22 +332,23 @@
 .username-input {
   padding: 1rem;
   font-size: 1.1rem;
-  border: 2px solid #ddd;
+  border: 2px solid #ffd966;
   border-radius: 8px;
   text-align: center;
   outline: none;
   transition: border 0.3s ease;
+  background: white;
 }
 
 .username-input:focus {
-  border-color: #667eea;
+  border-color: #e69b0f;
 }
 
 .join-button {
   padding: 1rem;
   font-size: 1.1rem;
-  background: linear-gradient(to right, #667eea, #764ba2);
-  color: white;
+  background: linear-gradient(to right, #e69b0f, #f5a524);
+  color: black;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -344,7 +386,7 @@
 .game-over-screen {
   width: 100%;
   max-width: 600px;
-  background: white;
+  background: #ffe88a;
   padding: 3rem;
   border-radius: 15px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.2);
@@ -354,7 +396,7 @@
 
 .game-over-reason {
   font-size: 1.5rem;
-  color: #764ba2;
+  color: #e69b0f;
   margin: 1rem 0 2rem;
 }
 
@@ -365,21 +407,21 @@
 .final-score {
   padding: 1rem;
   margin: 0.5rem 0;
-  background: #f0f0f0;
+  background: #ffd966;
   border-radius: 8px;
   color: #000000;
 }
 
 .your-score {
-  background: #d0e8ff;
+  background: #ffcc33;
   font-weight: bold;
 }
 
 .play-again-button {
   padding: 1rem 2rem;
   font-size: 1.2rem;
-  background: linear-gradient(to right, #667eea, #764ba2);
-  color: white;
+  background: linear-gradient(to right, #e69b0f, #f5a524);
+  color: black;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -422,30 +464,30 @@
 
 /* Username Screen with green theme */
 .username-screen {
-  background: linear-gradient(135deg, #4a8c4a 0%, #2e5e2e 100%);
+  background: linear-gradient(135deg, #e69b0f 0%, #f5a524 100%);
 }
 
 .username-container {
-  background: #f5fff5; /* Light green background */
+  background: #ffe88a; /* Light green background */
   color: #000000;
 }
 
 .welcome-title {
-  color: #2e5e2e; /* Dark green text */
+  color: black; /* Dark green text */
 }
 
 .join-button {
-  background: linear-gradient(to right, #4a8c4a, #2e5e2e);
+  background: linear-gradient(to right, #e69b0f, #f5a524);
 }
 
 /* Game Over Screen */
 .game-over-screen {
-  background: #f5fff5;
+  background: #ffe88a;
   color: #000000;
 }
 
 .play-again-button {
-  background: linear-gradient(to right, #4a8c4a, #2e5e2e);
+  background: linear-gradient(to right, #e69b0f, #f5a524);
 }
 
 .countdown {
@@ -506,15 +548,15 @@
 }
 
 .found-words li {
-  background-color: #f0f0f0;
+  background-color: #ffe88a;
   padding: 0.5rem;
   border-radius: 4px;
   font-size: 0.9rem;
-  color: #000000;
+  color: black;
 }
 
 .room-info {
-  background: #f5f5f5;
+  background: #ffe88a;
   padding: 1rem;
   border-radius: 8px;
   margin: 1rem 0;
@@ -529,7 +571,7 @@
 .room-code {
   font-size: 2rem;
   font-weight: bold;
-  color: #4a8c4a;
+  color: #e69b0f;
   letter-spacing: 0.2em;
   margin: 0.5rem 0;
 }
@@ -561,10 +603,10 @@
 .room-id {
   font-size: 2.5rem;
   font-weight: bold;
-  color: #4a8c4a;
+  color: #e69b0f;
   letter-spacing: 0.2em;
   padding: 1rem;
-  background: #f0f0f0;
+  background: #ffe88a;
   border-radius: 8px;
   margin: 1rem 0;
 }
@@ -586,7 +628,7 @@
 .player-item {
   padding: 0.8rem;
   margin: 0.5rem 0;
-  background: #f5f5f5;
+  background: #ffd966;
   border-radius: 4px;
   text-align: center;
   color: #000000;
@@ -600,7 +642,7 @@
 }
 
 .winner-info {
-  background: #f5f5f5;
+  background: #ffe88a;
   border-radius: 8px;
   padding: 2rem;
   margin: 2rem 0;
@@ -608,7 +650,7 @@
 }
 
 .win-reason {
-  color: #4a8c4a;
+  color: #e69b0f;
   font-size: 1.2rem;
   margin: 1rem 0;
 }
@@ -634,7 +676,7 @@
 }
 
 .words-list li {
-  background: #fff;
+  background: #ffd966;
   padding: 0.5rem 1rem;
   border-radius: 4px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
@@ -642,8 +684,8 @@
 }
 
 .return-button {
-  background: #4a8c4a;
-  color: white;
+  background: #e69b0f;
+  color: black;
   border: none;
   padding: 1rem 2rem;
   font-size: 1.2rem;
@@ -653,7 +695,12 @@
 }
 
 .return-button:hover {
-  background: #3a7c3a;
+  background: #f5a524;
   transform: translateY(-2px);
+}
+
+/* Ensure all text is black */
+h1, h2, h3, h4, h5, h6, p, span, div, input, button {
+  color: black;
 }
 

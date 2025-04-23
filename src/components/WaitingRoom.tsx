@@ -12,6 +12,12 @@ type Player = {
     foundWords: string[];
 };
 
+interface GameSettings {
+  pointsToWin: number;
+  isPanagramInstantWin: boolean;
+  totalWordsToWin: number;
+}
+
 interface WaitingRoomProps {
   roomId: string;
   players: Player[];
@@ -26,6 +32,11 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
   socket
 }) => {
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [gameSettings, setGameSettings] = useState<GameSettings>({
+    pointsToWin: 25,
+    isPanagramInstantWin: true,
+    totalWordsToWin: 10
+  });
 
   useEffect(() => {
     const handleCountdownUpdate = ({ timeLeft }: { timeLeft: number }) => {
@@ -44,14 +55,21 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
       onStartGame();
     };
 
+    const handleGameSettingsUpdate = (settings: GameSettings) => {
+      console.log('Game settings updated:', settings);
+      setGameSettings(settings);
+    };
+
     socket.on('countdownUpdate', handleCountdownUpdate);
     socket.on('countdownCancelled', handleCountdownCancel);
     socket.on('gameStarted', handleGameStart);
+    socket.on('gameSettingsUpdate', handleGameSettingsUpdate);
 
     return () => {
       socket.off('countdownUpdate', handleCountdownUpdate);
       socket.off('countdownCancelled', handleCountdownCancel);
       socket.off('gameStarted', handleGameStart);
+      socket.off('gameSettingsUpdate', handleGameSettingsUpdate);
     };
   }, [onStartGame, socket]);
 
@@ -65,6 +83,12 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
     socket.emit('cancelCountdown', { roomId });
   };
 
+  const updateGameSettings = (updates: Partial<GameSettings>) => {
+    const newSettings = { ...gameSettings, ...updates };
+    setGameSettings(newSettings);
+    socket.emit('updateGameSettings', { roomId, settings: newSettings });
+  };
+
   return (
     <div className="waiting-room">
       <div className="room-info">
@@ -72,6 +96,56 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
           <h2>Room Code:</h2>
           <div className="room-id">{roomId}</div>
           <p className="room-id-helper">Share this code with other players</p>
+        </div>
+
+        <div className="game-settings">
+          <h3>Game Settings</h3>
+          <div className="setting-item">
+            <label>Points to Win: {gameSettings.pointsToWin}</label>
+            <input 
+              type="range" 
+              min="10" 
+              max="50" 
+              value={gameSettings.pointsToWin}
+              onChange={(e) => updateGameSettings({ pointsToWin: parseInt(e.target.value) })}
+            />
+            <input 
+              type="number" 
+              min="10" 
+              max="50" 
+              value={gameSettings.pointsToWin}
+              onChange={(e) => updateGameSettings({ pointsToWin: parseInt(e.target.value) })}
+            />
+          </div>
+
+          <div className="setting-item">
+            <label>
+              <input 
+                type="checkbox" 
+                checked={gameSettings.isPanagramInstantWin}
+                onChange={(e) => updateGameSettings({ isPanagramInstantWin: e.target.checked })}
+              />
+              Panagram Instant Win
+            </label>
+          </div>
+
+          <div className="setting-item">
+            <label>Words to Win: {gameSettings.totalWordsToWin}</label>
+            <input 
+              type="range" 
+              min="5" 
+              max="20" 
+              value={gameSettings.totalWordsToWin}
+              onChange={(e) => updateGameSettings({ totalWordsToWin: parseInt(e.target.value) })}
+            />
+            <input 
+              type="number" 
+              min="5" 
+              max="20" 
+              value={gameSettings.totalWordsToWin}
+              onChange={(e) => updateGameSettings({ totalWordsToWin: parseInt(e.target.value) })}
+            />
+          </div>
         </div>
 
         {countdown !== null && (

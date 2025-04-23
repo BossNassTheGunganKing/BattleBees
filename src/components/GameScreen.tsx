@@ -13,6 +13,7 @@ interface GameScreenProps {
   players: Player[];
   currentPlayerId: string;
   onSubmitWord: (word: string) => void;
+  serverError?: string;
 }
 
 export const GameScreen: React.FC<GameScreenProps> = ({
@@ -21,26 +22,68 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   players,
   currentPlayerId,
   onSubmitWord,
+  serverError
 }) => {
   const [enteredWord, setEnteredWord] = useState('');
-  
-  // Add console.log to debug player data
-  console.log('Current ID:', currentPlayerId);
-  console.log('Players:', players);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isShaking, setIsShaking] = useState(false);
   
   const currentPlayer = players.find(p => p.id === currentPlayerId);
   const otherPlayers = players.filter(p => p.id !== currentPlayerId);
 
-  // Add more detailed null check with debug info
   if (!currentPlayer) {
     console.error('No current player found:', { currentPlayerId, players });
     return <div>Loading game...</div>;
   }
 
+  // Handle server errors
+  useEffect(() => {
+    if (serverError) {
+      showError(serverError);
+    }
+  }, [serverError]);
+
+  const showError = (message: string) => {
+    setErrorMessage(message);
+    setIsShaking(true);
+    setTimeout(() => {
+      setIsShaking(false);
+      setTimeout(() => setErrorMessage(''), 1000); // Clear error after shake
+    }, 500);
+  };
+
+  const validateWord = (word: string): string | null => {
+    if (word.length < 4) {
+      return 'Word must be at least 4 letters long';
+    }
+    
+    // Check if word uses valid letters
+    const letterSet = new Set(letters);
+    const invalidLetters = Array.from(word).filter(letter => !letterSet.has(letter));
+    if (invalidLetters.length > 0) {
+      return `Invalid letters used: ${invalidLetters.join(', ')}`;
+    }
+
+    // Check if word uses center letter
+    if (!word.includes(centerLetter)) {
+      return 'Word must use the center letter';
+    }
+
+    return null;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!enteredWord.trim()) return;
-    onSubmitWord(enteredWord.toUpperCase());
+    const word = enteredWord.trim().toUpperCase();
+    if (!word) return;
+
+    const error = validateWord(word);
+    if (error) {
+      showError(error);
+      return;
+    }
+
+    onSubmitWord(word);
     setEnteredWord('');
   };
 
@@ -66,9 +109,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               value={enteredWord}
               onChange={(e) => setEnteredWord(e.target.value.toUpperCase())}
               placeholder="Enter word"
-              className="word-input"
+              className={`word-input ${isShaking ? 'shake' : ''}`}
             />
             <button type="submit" className="submit-button">Submit</button>
+            <div className={`error-message ${errorMessage ? 'visible' : ''}`}>
+              {errorMessage}
+            </div>
           </form>
         </div>
 

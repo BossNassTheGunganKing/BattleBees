@@ -236,6 +236,14 @@ const App: React.FC = () => {
       setLoading(false);  // Clear loading state on any socket error
     });
 
+    socket.on('wordError', ({ message }) => {
+      // Pass the error to the GameScreen component
+      setGame(prev => ({
+        ...prev,
+        errorMessage: message
+      }));
+    });
+
     return () => {
       socket.off('connect');
       socket.off('joinConfirmed');
@@ -251,6 +259,7 @@ const App: React.FC = () => {
       socket.off('gameOver');
       socket.off('returnToLobby');
       socket.off('error');
+      socket.off('wordError');
     };
   }, [loading]);
 
@@ -387,6 +396,7 @@ const App: React.FC = () => {
           players={game.players}
           currentPlayerId={game.currentPlayerId}
           onSubmitWord={handleSubmit}
+          serverError={game.errorMessage} // Add this prop
         />
       )}
       {currentScreen === GameScreenEnum.VICTORY && game.winner && (

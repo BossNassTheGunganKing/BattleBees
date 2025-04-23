@@ -248,15 +248,28 @@ io.on('connection', (socket) => {
       socket.emit('wordError', { message: 'Word must be at least 4 letters long!' });
       return;
     }
+
+    // Convert word to uppercase for consistent comparison
+    const upperWord = word.toUpperCase();
+    
+    // Check if word only uses letters from the letter pool
+    const letterPool = new Set(room.letters);
+    const invalidLetters = Array.from(upperWord).filter(letter => !letterPool.has(letter));
+    if (invalidLetters.length > 0) {
+      socket.emit('wordError', { 
+        message: `Invalid letters used: ${invalidLetters.join(', ')}. Only use letters from the honeycomb!` 
+      });
+      return;
+    }
   
     // Check if word contains center letter
-    if (!word.toUpperCase().includes(room.centerLetter)) {
+    if (!upperWord.includes(room.centerLetter)) {
       socket.emit('wordError', { message: 'Word must contain center letter!' });
       return;
     }
   
     // Check if word was already found by this player
-    if (player.foundWords.includes(word.toUpperCase())) {
+    if (player.foundWords.includes(upperWord)) {
       socket.emit('wordError', { message: 'Word already found!' });
       return;
     }
@@ -269,12 +282,12 @@ io.on('connection', (socket) => {
     }
   
     // Calculate score
-    const isPangram = new Set(word.toLowerCase().split('')).size === room.letters.length;
+    const isPangram = new Set(upperWord.split('')).size === room.letters.length;
     const wordScore = calculateScore(word.length) + (isPangram ? 7 : 0);
   
     // Update player's score and found words
     player.score += wordScore;
-    player.foundWords.push(word.toUpperCase());
+    player.foundWords.push(upperWord);
 
     console.log('Checking win conditions:', {
       wordCount: player.foundWords.length,
