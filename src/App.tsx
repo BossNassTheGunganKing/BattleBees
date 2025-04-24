@@ -54,15 +54,16 @@ type GameState = {
   gameOver: boolean;
   gameOverReason: string;
   errorMessage: string;
-  roomExists: boolean; // Added to track room validity
-  countdown?: number | null; // Added countdown to game state
+  roomExists: boolean;
+  countdown?: number | null;
   winner: {
     id: string;
     name: string;
     score: number;
     foundWords: string[];
     winReason: string;
-  } | null; // Make winner explicitly nullable
+    pangrams: string[];
+  } | null;
   gameSettings?: {
     pointsToWin: number;
     isPanagramInstantWin: boolean;

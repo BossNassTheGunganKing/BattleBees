@@ -95,15 +95,17 @@ function getRandomLetterSet() {
   try {
     const fileContent = fs.readFileSync(path.join(__dirname, 'gameLetters.csv'));
     const records = csv.parse(fileContent, {
-      columns: false,  // Changed to false since we don't have headers
-      skip_empty_lines: true
+      columns: ['letters', 'pangrams'],
+      skip_empty_lines: true,
+      fromLine: 2 // Skip header row
     });
 
     // Select random row from CSV
     const randomRow = records[Math.floor(Math.random() * records.length)];
     
-    // Get the letters from the row - should be a single string of 7 letters
-    const letterString = randomRow[0];
+    // Get the letters and pangrams from the row
+    const letterString = randomRow.letters;
+    const pangrams = randomRow.pangrams.split('|');
     
     // First letter is the center letter, rest are surrounding letters
     const centerLetter = letterString[0];
@@ -117,14 +119,16 @@ function getRandomLetterSet() {
 
     return {
       letters,
-      centerLetter
+      centerLetter,
+      pangrams
     };
   } catch (error) {
     console.error('Error reading game letters:', error);
     // Fallback in case of file error
     return {
       letters: ['B', 'F', 'D', 'O', 'L', 'I', 'E'],
-      centerLetter: 'B'
+      centerLetter: 'B',
+      pangrams: ['FOIBLE']
     };
   }
 }
@@ -141,11 +145,12 @@ io.on('connection', (socket) => {
   socket.on('createRoom', ({ roomId, playerName }) => {
     console.log(`Creating room: ${roomId} for player: ${playerName}`);
 
-    const { letters, centerLetter } = getRandomLetterSet();
+    const { letters, centerLetter, pangrams } = getRandomLetterSet();
     rooms[roomId] = {
       roomId,
       letters,
       centerLetter,
+      pangrams,
       players: {},
       gameStarted: false,
       gameSettings: {
@@ -284,7 +289,7 @@ io.on('connection', (socket) => {
   
     // Calculate score
     const isPangram = new Set(upperWord.split('')).size === room.letters.length;
-    const wordScore = calculateScore(word.length) + (isPangram ? 7 : 0);
+    const wordScore = calculateScore(word.length) + (isPangram ? 14 : 0); // Changed from 7 to 14 for pangrams
   
     // Update player's score and found words
     player.score += wordScore;
@@ -316,7 +321,8 @@ io.on('connection', (socket) => {
         name: player.name,
         score: player.score,
         foundWords: player.foundWords,
-        winReason
+        winReason,
+        pangrams: rooms[roomId].pangrams
       };
 
       io.to(roomId).emit('gameOver', {
