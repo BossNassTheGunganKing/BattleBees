@@ -50,6 +50,19 @@ Players can win by:
   - Socket.IO
   - CSV-Parse
 
+## Journey
+The project started with the creation of the core game interface, featuring a central letter surrounded by hexagonal tiles containing other letters. This initial stage involved implementing user input and validation.
+
+For letter generation, I initially explored generating the letters approaches but ultimately opted to just use historical letter sets from previous spelling bees for a more reliable experience.
+
+My first attempt at acquiring these letter sets involved using Python's Tesseract OCR library to extract letters from images on nytbee.com. However, this proved challenging, particularly with the central letter, which was often incorrectly identified as 'O', likely due to the hexagonal design. Thus, I shifted to scraping sbsolver.com's post archives to extract both the letters and the associated pangram information.
+
+Following the core game mechanics, I developed the additional user interface screens: the initial welcome screen, a lobby area, and a victory screen.
+
+The next phase focused on building and integrating the backend with the frontend components.
+
+After achieving local functionality, I deployed both the frontend and backend on render.com. Following further debugging, the application was successfully launched and tested with friends
+
 ## Getting Started
 
 1. Clone the repository
@@ -85,15 +98,4 @@ Players can win by:
 - `SOCKET_URL`: WebSocket server URL (defaults to localhost:4000 in development)
 - `PORT`: Server port (defaults to 4000)
 
-## Journey
-The project started with the creation of the core game interface, featuring a central letter surrounded by hexagonal tiles containing other letters. This initial stage involved implementing user input and validation.
 
-For letter generation, I initially explored generating the letters approaches but ultimately opted to just use historical letter sets from previous spelling bees for a more reliable experience.
-
-My first attempt at acquiring these letter sets involved using Python's Tesseract OCR library to extract letters from images on nytbee.com. However, this proved challenging, particularly with the central letter, which was often incorrectly identified as 'O', likely due to the hexagonal design. Thus, I shifted to scraping sbsolver.com's post archives to extract both the letters and the associated pangram information.
-
-Following the core game mechanics, I developed the additional user interface screens: the initial welcome screen, a lobby area, and a victory screen.
-
-The next phase focused on building and integrating the backend with the frontend components.
-
-After achieving local functionality, I deployed both the frontend and backend on render.com. Following further debugging, the application was successfully launched and tested with friends
