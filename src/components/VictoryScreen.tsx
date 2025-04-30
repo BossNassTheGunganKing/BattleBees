@@ -6,6 +6,7 @@ interface Winner {
   score: number;
   foundWords: string[];
   winReason: string;
+  pangrams: string[];
 }
 
 interface VictoryScreenProps {
@@ -33,6 +34,14 @@ export const VictoryScreen: React.FC<VictoryScreenProps> = ({
           <h3>Winning Words:</h3>
           <ul>
             {winner.foundWords.map((word, index) => (
+              <li key={index}>{word}</li>
+            ))}
+          </ul>
+        </div>
+        <div className="pangrams-list">
+          <h3>Pangrams:</h3>
+          <ul>
+            {winner.pangrams.map((word, index) => (
               <li key={index}>{word}</li>
             ))}
           </ul>

@@ -6,9 +6,36 @@ import { WaitingRoom } from './components/WaitingRoom';
 import { GameScreen } from './components/GameScreen';
 import { VictoryScreen } from './components/VictoryScreen';
 
-const socket: Socket = io('http://localhost:4000', {
-  reconnectionAttempts: 3,
+const SOCKET_URL = import.meta.env.PROD 
+  ? 'https://battlebeesserver.onrender.com' 
+  : 'http://localhost:4000';
+
+const socket: Socket = io(SOCKET_URL, {
+  path: '/socket.io/',
+  transports: ['polling', 'websocket'], // Try polling first, then websocket
+  reconnectionAttempts: 5,
   reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: 20000,
+  autoConnect: true
+});
+
+// Enhanced error logging
+socket.on('connect_error', (error) => {
+  console.error('Connection error:', error);
+  console.log('Attempting to reconnect with polling...');
+  
+  // If WebSocket fails, try polling
+  socket.io.opts.transports = ['polling', 'websocket'];
+});
+
+// Add connection state logging
+socket.on('connect', () => {
+  console.log('Connected successfully via:', socket.io.engine.transport.name);
+});
+
+socket.on('disconnect', (reason) => {
+  console.log('Disconnected:', reason);
 });
 
 type Player = {
@@ -27,15 +54,21 @@ type GameState = {
   gameOver: boolean;
   gameOverReason: string;
   errorMessage: string;
-  roomExists: boolean; // Added to track room validity
-  countdown?: number | null; // Added countdown to game state
+  roomExists: boolean;
+  countdown?: number | null;
   winner: {
     id: string;
     name: string;
     score: number;
     foundWords: string[];
     winReason: string;
-  } | null; // Make winner explicitly nullable
+    pangrams: string[];
+  } | null;
+  gameSettings?: {
+    pointsToWin: number;
+    isPanagramInstantWin: boolean;
+    totalWordsToWin: number;
+  };
 };
 
 type GameStateUpdate = {
@@ -81,7 +114,10 @@ const App: React.FC = () => {
     });
 
     socket.on('joinConfirmed', ({ playerId, letters, centerLetter, players, roomId, roomExists }) => {
+      console.log('Join confirmed with data:', { playerId, roomId, players });
+      
       if (!roomExists) {
+        setLoading(false);
         setGame(prev => ({
           ...prev,
           errorMessage: 'Room does not exist',
@@ -90,7 +126,6 @@ const App: React.FC = () => {
         return;
       }
       
-      console.log('Join confirmed:', { playerId, roomId, players });
       setGame(prev => ({
         ...prev,
         currentPlayerId: playerId,
@@ -106,11 +141,25 @@ const App: React.FC = () => {
     });
 
     socket.on('roomError', (message) => {
+      console.error('Room error:', message);
+      setLoading(false);
       setGame(prev => ({
         ...prev,
         errorMessage: message,
         roomExists: false
       }));
+    });
+
+    // Add specific handler for disconnect during room creation/joining
+    socket.on('disconnect', (reason) => {
+      console.log('Disconnected:', reason);
+      if (loading) {
+        setLoading(false);
+        setGame(prev => ({
+          ...prev,
+          errorMessage: 'Connection lost while creating/joining room'
+        }));
+      }
     });
 
     socket.on('gameState', (state) => {
@@ -127,6 +176,7 @@ const App: React.FC = () => {
         ...prev,
         errorMessage: 'Connection failed. Trying to reconnect...'
       }));
+      setLoading(false);  // Add this line to clear loading state on connection error
     });
 
     socket.on('playerJoined', ({ players }) => {
@@ -187,6 +237,19 @@ const App: React.FC = () => {
       setCurrentScreen(GameScreenEnum.WAITING);
     });
 
+    socket.on('error', (error) => {
+      console.error('Socket error:', error);
+      setLoading(false);  // Clear loading state on any socket error
+    });
+
+    socket.on('wordError', ({ message }) => {
+      // Pass the error to the GameScreen component
+      setGame(prev => ({
+        ...prev,
+        errorMessage: message
+      }));
+    });
+
     return () => {
       socket.off('connect');
       socket.off('joinConfirmed');
@@ -201,8 +264,10 @@ const App: React.FC = () => {
       socket.off('gameStarted');
       socket.off('gameOver');
       socket.off('returnToLobby');
+      socket.off('error');
+      socket.off('wordError');
     };
-  }, []);
+  }, [loading]);
 
   const generateRoomId = () => {
     return Math.random().toString(36).substring(2, 7).toUpperCase();
@@ -211,15 +276,12 @@ const App: React.FC = () => {
   const handleCreateRoom = (playerName: string) => {
     const newRoomId = generateRoomId();
     console.log('Creating room with ID:', newRoomId);
-
-    // Only emit the create room event and wait for server confirmation
-    socket.emit('createRoom', { 
-      roomId: newRoomId,
-      playerName
-    });
-
-    // Don't set game state here - wait for 'joinConfirmed' event
+    
     setLoading(true);
+    socket.emit('createRoom', { 
+      roomId: newRoomId, 
+      playerName 
+    });
   };
 
   const handleJoinRoom = (roomId: string, playerName: string) => {
@@ -265,6 +327,16 @@ const App: React.FC = () => {
     });
   };
 
+  if (loading) {
+    return (
+      <div className="app-container">
+        <div className="loading-screen">
+          <h2>Creating room...</h2>
+        </div>
+      </div>
+    );
+  }
+
   if (!game.roomExists) {
     return (
       <div className="app-container">
@@ -284,28 +356,6 @@ const App: React.FC = () => {
     );
   }
 
-  // if (game.gameOver) {
-  //   return (
-  //     <div className="app-container">
-  //       <div className="game-over-screen">
-  //         <h1>Game Over!</h1>
-  //         <p className="game-over-reason">{game.gameOverReason}</p>
-  //         <div className="final-scores">
-  //           <h2>Final Scores</h2>
-  //           {game.players.map((player) => (
-  //             <div key={player.id} className={`final-score ${player.id === game.currentPlayerId ? 'your-score' : ''}`}>
-  //               {player.name}: {player.score} points
-  //             </div>
-  //           ))}
-  //         </div>
-  //         <button onClick={restartGame} className="play-again-button">
-  //           Play Again
-  //         </button>
-  //       </div>
-  //     </div>
-  //   );
-  // }
-
   return (
     <div className="app-container">
       {currentScreen === GameScreenEnum.LOBBY && (
@@ -320,6 +370,8 @@ const App: React.FC = () => {
           roomId={game.roomId}
           players={game.players}
           onStartGame={handleStartGame}
+          socket={socket}
+          gameSettings={game.gameSettings}
         />
       )}
       {currentScreen === GameScreenEnum.PLAYING && (
@@ -329,6 +381,8 @@ const App: React.FC = () => {
           players={game.players}
           currentPlayerId={game.currentPlayerId}
           onSubmitWord={handleSubmit}
+          serverError={game.errorMessage} // Add this prop
+          gameSettings={game.gameSettings}
         />
       )}
       {currentScreen === GameScreenEnum.VICTORY && game.winner && (

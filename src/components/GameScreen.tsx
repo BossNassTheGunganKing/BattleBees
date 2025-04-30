@@ -13,6 +13,12 @@ interface GameScreenProps {
   players: Player[];
   currentPlayerId: string;
   onSubmitWord: (word: string) => void;
+  serverError?: string;
+  gameSettings?: {
+    pointsToWin: number;
+    isPanagramInstantWin: boolean;
+    totalWordsToWin: number;
+  };
 }
 
 export const GameScreen: React.FC<GameScreenProps> = ({
@@ -21,26 +27,99 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   players,
   currentPlayerId,
   onSubmitWord,
+  serverError,
+  gameSettings = {
+    pointsToWin: 30,
+    isPanagramInstantWin: true,
+    totalWordsToWin: 10
+  }
 }) => {
   const [enteredWord, setEnteredWord] = useState('');
-  
-  // Add console.log to debug player data
-  console.log('Current ID:', currentPlayerId);
-  console.log('Players:', players);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isShaking, setIsShaking] = useState(false);
+  const [shuffledLetters, setShuffledLetters] = useState(letters);
   
   const currentPlayer = players.find(p => p.id === currentPlayerId);
   const otherPlayers = players.filter(p => p.id !== currentPlayerId);
 
-  // Add more detailed null check with debug info
+  // Reset shuffled letters when new letters come in
+  useEffect(() => {
+    setShuffledLetters(letters);
+  }, [letters]);
+
   if (!currentPlayer) {
     console.error('No current player found:', { currentPlayerId, players });
     return <div>Loading game...</div>;
   }
 
+  // Handle server errors
+  useEffect(() => {
+    if (serverError) {
+      showError(serverError);
+    }
+  }, [serverError]);
+
+  const showError = (message: string) => {
+    setIsShaking(false); // Reset shake state first
+    setErrorMessage(message);
+    // Use requestAnimationFrame to ensure the reset is processed before setting shake again
+    requestAnimationFrame(() => {
+      setIsShaking(true);
+      setTimeout(() => {
+        setIsShaking(false);
+      }, 500);
+    });
+  };
+
+  const shuffleLetters = () => {
+    const surroundingLetters = shuffledLetters.filter(l => l !== centerLetter);
+    const shuffled = [...surroundingLetters];
+    
+    // Fisher-Yates shuffle algorithm
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    
+    // Reconstruct the letters array with center letter in its original position
+    const centerIndex = letters.indexOf(centerLetter);
+    const newLetters = [...shuffled];
+    newLetters.splice(centerIndex, 0, centerLetter);
+    setShuffledLetters(newLetters);
+  };
+
+  const validateWord = (word: string): string | null => {
+    if (word.length < 4) {
+      return 'Word must be at least 4 letters long';
+    }
+    
+    // Check if word uses valid letters
+    const letterSet = new Set(letters);
+    const invalidLetters = Array.from(word).filter(letter => !letterSet.has(letter));
+    if (invalidLetters.length > 0) {
+      return `Invalid letters used: ${invalidLetters.join(', ')}`;
+    }
+
+    // Check if word uses center letter
+    if (!word.includes(centerLetter)) {
+      return 'Word must use the center letter';
+    }
+
+    return null;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!enteredWord.trim()) return;
-    onSubmitWord(enteredWord.toUpperCase());
+    const word = enteredWord.trim().toUpperCase();
+    if (!word) return;
+
+    const error = validateWord(word);
+    if (error) {
+      showError(error);
+      return;
+    }
+
+    onSubmitWord(word);
     setEnteredWord('');
   };
 
@@ -59,16 +138,26 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </div>
 
         <div className="game-center">
-          {renderHoneycomb(letters, centerLetter)}
+          {renderHoneycomb(shuffledLetters, centerLetter)}
+          <button 
+            onClick={shuffleLetters} 
+            className="shuffle-button"
+            aria-label="Shuffle letters"
+          >
+            🔄 Shuffle
+          </button>
           <form onSubmit={handleSubmit} className="word-input-form">
             <input
               type="text"
               value={enteredWord}
               onChange={(e) => setEnteredWord(e.target.value.toUpperCase())}
               placeholder="Enter word"
-              className="word-input"
+              className={`word-input ${isShaking ? 'shake' : ''}`}
             />
             <button type="submit" className="submit-button">Submit</button>
+            <div className={`error-message ${errorMessage ? 'visible' : ''}`}>
+              {errorMessage}
+            </div>
           </form>
         </div>
 
@@ -85,6 +174,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 ))}
               </ul>
             </div>
+          </div>
+          <div className="win-conditions">
+            <h3>Win Conditions</h3>
+            <ul>
+              <li>Score {gameSettings.pointsToWin} points</li>
+              <li>Find {gameSettings.totalWordsToWin} words</li>
+              {gameSettings.isPanagramInstantWin && (
+                <li>Find a pangram (use all letters)</li>
+              )}
+            </ul>
           </div>
         </div>
       </div>

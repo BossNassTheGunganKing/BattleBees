@@ -1,40 +1,73 @@
 const express = require('express');
+const { Server } = require('socket.io');
+const { createServer } = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const axios = require('axios'); // Add axios for API calls
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parse/sync');
+const debug = require('debug')('battlebees:server');
 
 const app = express();
+const httpServer = createServer(app);
+const PORT = process.env.PORT || 4000;
 
-// Configure CORS for Express
+// Update CORS configuration for Express
 app.use(cors({
   origin: [
-    "http://localhost:5173",
-    "https://battlebees.onrender.com"
+    'http://localhost:5173',
+    'https://battlebees.onrender.com'
   ],
-  methods: ["GET", "POST"],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 
-const PORT = 4000;
-const MAX_PLAYERS = 8;
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Add after CORS configuration
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    socketio: {
+      connected: io.engine.clientsCount,
+      rooms: Array.from(io.sockets.adapter.rooms.keys())
+    }
+  });
 });
 
-// Configure Socket.IO with CORS
-const io = socketIo(server, {
+app.get('/debug/rooms', (req, res) => {
+  res.json({
+    rooms: Object.keys(rooms).map(roomId => ({
+      roomId,
+      playerCount: Object.keys(rooms[roomId].players).length,
+      gameStarted: rooms[roomId].gameStarted,
+      countdownActive: rooms[roomId].countdownActive
+    }))
+  });
+});
+
+// Update Socket.IO configuration
+const io = new Server(httpServer, {
+  path: '/socket.io/', // Explicit socket.io path
   cors: {
     origin: [
-      "http://localhost:5173",
-      "https://battlebees.onrender.com"
+      'http://localhost:5173',
+      'https://battlebees.onrender.com'
     ],
-    methods: ["GET", "POST"],
-    credentials: true,
-    allowedHeaders: ["my-custom-header"]
-  }
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  transports: ['websocket', 'polling'], // Prefer WebSocket, fallback to polling
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  maxHttpBufferSize: 1e8
+});
+
+// Single listen call on httpServer
+httpServer.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`WebSocket server available at wss://battlebeesserver.onrender.com`);
 });
 
 const rooms = {};
@@ -62,57 +95,69 @@ function getRandomLetterSet() {
   try {
     const fileContent = fs.readFileSync(path.join(__dirname, 'gameLetters.csv'));
     const records = csv.parse(fileContent, {
-      columns: true,
-      skip_empty_lines: true
+      columns: ['letters', 'pangrams'],
+      skip_empty_lines: true,
+      fromLine: 2 // Skip header row
     });
 
     // Select random row from CSV
     const randomRow = records[Math.floor(Math.random() * records.length)];
     
-    // Ensure we get exactly 7 letters
-    const letters = Array.from(randomRow.letters).filter(char => 
-      char.match(/[A-Z]/)
-    ).slice(0, 7);
+    // Get the letters and pangrams from the row
+    const letterString = randomRow.letters;
+    const pangrams = randomRow.pangrams.split('|');
+    
+    // First letter is the center letter, rest are surrounding letters
+    const centerLetter = letterString[0];
+    const letters = Array.from(letterString);
 
     // Validate letter count
     if (letters.length !== 7) {
-      console.error('Invalid letter count in CSV row:', randomRow);
+      console.error('Invalid letter count in CSV row:', letterString);
       throw new Error('Invalid letter count');
-    }
-
-    // Validate center letter is in the set
-    if (!letters.includes(randomRow.centerLetter)) {
-      console.error('Center letter not in letter set:', randomRow);
-      throw new Error('Invalid center letter');
     }
 
     return {
       letters,
-      centerLetter: randomRow.centerLetter
+      centerLetter,
+      pangrams
     };
   } catch (error) {
     console.error('Error reading game letters:', error);
     // Fallback in case of file error
     return {
       letters: ['B', 'F', 'D', 'O', 'L', 'I', 'E'],
-      centerLetter: 'B'
+      centerLetter: 'B',
+      pangrams: ['FOIBLE']
     };
   }
 }
 
 io.on('connection', (socket) => {
-  console.log(`New connection: ${socket.id}`);
+  debug(`Client connected: ${socket.id}`);
+  console.log('Transport:', socket.conn.transport.name);
+
+  // Add connection event logging
+  socket.onAny((eventName, ...args) => {
+    debug(`Event received - ${eventName}:`, args);
+  });
 
   socket.on('createRoom', ({ roomId, playerName }) => {
     console.log(`Creating room: ${roomId} for player: ${playerName}`);
 
-    const { letters, centerLetter } = getRandomLetterSet();
+    const { letters, centerLetter, pangrams } = getRandomLetterSet();
     rooms[roomId] = {
       roomId,
       letters,
       centerLetter,
+      pangrams,
       players: {},
-      gameStarted: false
+      gameStarted: false,
+      gameSettings: {
+        pointsToWin: 30,
+        isPanagramInstantWin: true,
+        totalWordsToWin: 10
+      }
     };
 
     // Add the creating player to the room
@@ -125,23 +170,27 @@ io.on('connection', (socket) => {
 
     socket.join(roomId);
 
-    // Send confirmation with room details
+    // Send explicit joinConfirmed event to the room creator
     socket.emit('joinConfirmed', {
       playerId: socket.id,
       roomId,
       letters: rooms[roomId].letters,
       centerLetter: rooms[roomId].centerLetter,
-      players: Object.values(rooms[roomId].players)
+      players: Object.values(rooms[roomId].players),
+      roomExists: true
     });
 
     // Broadcast initial room state
     broadcastGameState(roomId);
+    
+    console.log(`Room ${roomId} created and joined by ${playerName}`);
   });
 
   socket.on('joinRoom', ({ roomId, playerName }) => {
-    console.log(`Player ${playerName} attempting to join room ${roomId}`);
+    debug(`Join room request - Room: ${roomId}, Player: ${playerName}`);
 
     if (!rooms[roomId]) {
+      debug(`Room ${roomId} not found`);
       socket.emit('roomError', 'Room not found');
       return;
     }
@@ -155,17 +204,27 @@ io.on('connection', (socket) => {
     };
 
     socket.join(roomId);
+    debug(`Player ${playerName} joined room ${roomId}`);
 
-    // Send confirmation to joining player with roomId included
-    socket.emit('joinConfirmed', {
+    // Emit join confirmation
+    const joinData = {
       playerId: socket.id,
-      roomId, // Include roomId in response
+      roomId,
       letters: rooms[roomId].letters,
       centerLetter: rooms[roomId].centerLetter,
+      players: Object.values(rooms[roomId].players),
+      roomExists: true
+    };
+
+    debug('Sending join confirmation:', joinData);
+    socket.emit('joinConfirmed', joinData);
+
+    // Broadcast to other players
+    socket.to(roomId).emit('playerJoined', {
       players: Object.values(rooms[roomId].players)
     });
 
-    // Broadcast updated game state to all players
+    // Broadcast updated game state
     broadcastGameState(roomId);
 
     console.log(`Room ${roomId} players:`, rooms[roomId].players);
@@ -195,15 +254,28 @@ io.on('connection', (socket) => {
       socket.emit('wordError', { message: 'Word must be at least 4 letters long!' });
       return;
     }
+
+    // Convert word to uppercase for consistent comparison
+    const upperWord = word.toUpperCase();
+    
+    // Check if word only uses letters from the letter pool
+    const letterPool = new Set(room.letters);
+    const invalidLetters = Array.from(upperWord).filter(letter => !letterPool.has(letter));
+    if (invalidLetters.length > 0) {
+      socket.emit('wordError', { 
+        message: `Invalid letters used: ${invalidLetters.join(', ')}. Only use letters from the honeycomb!` 
+      });
+      return;
+    }
   
     // Check if word contains center letter
-    if (!word.toUpperCase().includes(room.centerLetter)) {
+    if (!upperWord.includes(room.centerLetter)) {
       socket.emit('wordError', { message: 'Word must contain center letter!' });
       return;
     }
   
     // Check if word was already found by this player
-    if (player.foundWords.includes(word.toUpperCase())) {
+    if (player.foundWords.includes(upperWord)) {
       socket.emit('wordError', { message: 'Word already found!' });
       return;
     }
@@ -216,12 +288,12 @@ io.on('connection', (socket) => {
     }
   
     // Calculate score
-    const isPangram = new Set(word.toLowerCase().split('')).size === room.letters.length;
-    const wordScore = calculateScore(word.length) + (isPangram ? 7 : 0);
+    const isPangram = new Set(upperWord.split('')).size === room.letters.length;
+    const wordScore = calculateScore(word.length) + (isPangram ? 14 : 0); // Changed from 7 to 14 for pangrams
   
     // Update player's score and found words
     player.score += wordScore;
-    player.foundWords.push(word.toUpperCase());
+    player.foundWords.push(upperWord);
 
     console.log('Checking win conditions:', {
       wordCount: player.foundWords.length,
@@ -231,17 +303,17 @@ io.on('connection', (socket) => {
 
     // Check win conditions with explicit comparisons
     const hasWon = (
-      player.foundWords.length >= 10 || 
-      player.score >= 30 || 
-      isPangram === true
+      player.score >= rooms[roomId].gameSettings.pointsToWin || 
+      player.foundWords.length >= rooms[roomId].gameSettings.totalWordsToWin || 
+      (isPangram && rooms[roomId].gameSettings.isPanagramInstantWin)
     );
 
     if (hasWon) {
-      console.log('Game won!', {
-        player: player.name,
-        reason: isPangram ? 'pangram' : 
-                player.foundWords.length >= 10 ? 'words' : 'score'
-      });
+      const winReason = isPangram && rooms[roomId].gameSettings.isPanagramInstantWin 
+        ? 'Found a pangram!' 
+        : player.foundWords.length >= rooms[roomId].gameSettings.totalWordsToWin 
+          ? `Found ${rooms[roomId].gameSettings.totalWordsToWin} words!`
+          : `Reached ${rooms[roomId].gameSettings.pointsToWin} points!`;
 
       rooms[roomId].gameOver = true;
       rooms[roomId].winner = {
@@ -249,12 +321,10 @@ io.on('connection', (socket) => {
         name: player.name,
         score: player.score,
         foundWords: player.foundWords,
-        winReason: isPangram ? 'Found a pangram!' : 
-                   player.foundWords.length >= 10 ? 'Found 10 words!' :
-                   'Reached 30 points!'
+        winReason,
+        pangrams: rooms[roomId].pangrams
       };
 
-      // Notify all players of game end
       io.to(roomId).emit('gameOver', {
         winner: rooms[roomId].winner
       });
@@ -391,8 +461,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('disconnect', () => {
-    console.log(`Client disconnected: ${socket.id}`);
+  socket.on('disconnect', (reason) => {
+    console.log(`Client disconnected: ${socket.id}, reason: ${reason}`);
     // Clean up empty rooms
     for (const roomId in rooms) {
       if (rooms[roomId].players[socket.id]) {
@@ -406,10 +476,25 @@ io.on('connection', (socket) => {
     }
   });
 
-  function broadcastGameState(roomId) {
+  socket.on('updateGameSettings', ({ roomId, settings }) => {
     if (!rooms[roomId]) return;
     
-    io.to(roomId).emit('gameState', {
+    rooms[roomId].gameSettings = {
+      ...rooms[roomId].gameSettings,
+      ...settings
+    };
+    
+    // Broadcast updated game state to all players
+    broadcastGameState(roomId);
+  });
+
+  function broadcastGameState(roomId) {
+    if (!rooms[roomId]) {
+      debug(`Cannot broadcast - Room ${roomId} not found`);
+      return;
+    }
+    
+    const gameState = {
       roomId,
       letters: rooms[roomId].letters,
       centerLetter: rooms[roomId].centerLetter,
@@ -417,7 +502,22 @@ io.on('connection', (socket) => {
       gameStarted: rooms[roomId].gameStarted,
       gameOver: rooms[roomId].gameOver,
       winner: rooms[roomId].winner,
-      countdownActive: rooms[roomId].countdownActive || false
-    });
+      countdownActive: rooms[roomId].countdownActive || false,
+      gameSettings: rooms[roomId].gameSettings
+    };
+
+    debug(`Broadcasting game state for room ${roomId}:`, gameState);
+    io.to(roomId).emit('gameState', gameState);
   }
+});
+
+// Add this after your route definitions
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// Add a catch-all route
+app.use('*', (req, res) => {
+  res.status(404).json({ error: 'Not found' });
 });
