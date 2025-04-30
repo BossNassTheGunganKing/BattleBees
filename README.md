@@ -2,6 +2,8 @@
 
 A multiplayer word game inspired by spelling bee puzzles, built with React, TypeScript, and Socket.IO.
 
+Available here: https://battlebees.onrender.com/
+
 ## Features
 
 - 🎮 Real-time multiplayer gameplay
