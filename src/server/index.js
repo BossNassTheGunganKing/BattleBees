@@ -422,9 +422,10 @@ io.on('connection', (socket) => {
     });
   
     // Get new letters
-    const { letters, centerLetter } = getRandomLetterSet();
+    const { letters, centerLetter, pangrams } = getRandomLetterSet();
     rooms[roomId].letters = letters;
     rooms[roomId].centerLetter = centerLetter;
+    rooms[roomId].pangrams = pangrams;
   
     // Broadcast to all players in the room
     io.to(roomId).emit('returnToLobby', {
